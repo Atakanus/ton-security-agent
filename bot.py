@@ -214,7 +214,7 @@ async def process_wallet_check(update: Update, address: str):
         f"*Safety Score:* {score}/100\n"
         f"`{bar}` {verdict}\n\n"
         f"*Wallet Info:*\n"
-        f"💎 Balance: `{balance:.2f} TON`\n"
+        f"💎 Balance: `{float(balance):.2f} TON`\n"
         f"📊 State: `{state}`\n"
         f"📝 Recent txs: `{tx_count}`\n\n"
         f"*Risk Assessment:*\n"
