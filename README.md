@@ -1,57 +1,101 @@
 # 🛡️ TON Security Agent
 
-An AI-powered security bot for the TON ecosystem. Protects users from scams, suspicious wallets, and malicious activity on the TON blockchain.
+An AI-native security agent for the TON ecosystem. Protects users from scams, phishing attacks, and malicious wallets — all inside Telegram.
+
+Built for **TON AI Hackathon 2026 — Track 1: Agent Infrastructure**
+
+🤖 **Try it live:** [@TONSecurityAgentBot](https://t.me/TONSecurityAgentBot)
+
+---
 
 ## Features
 
-- 🔍 **Wallet Analysis** — Check any TON address for suspicious patterns
-- 🚨 **Scam Detection** — Scan messages for known scam patterns  
-- 📊 **Safety Score** — Get a 0-100 risk score for any wallet
-- ⚡ **Real-time** — Live data from TON Center API
+- 🔍 **Wallet Analysis** — AI agent queries the blockchain and analyzes any TON address
+- 🚨 **Scam Detection** — Scan messages for phishing links and social engineering patterns
+- 🤖 **MCP-Inspired Agentic Loop** — AI autonomously calls tools (wallet info, transactions, scam DB) to generate security assessments
+- 📊 **Safety Score** — 0-100 risk score for any wallet
+- 👥 **Community Scam Database** — Users report scam wallets by category
+- 🏴‍☠️ **Top Scam Wallets** — Community-powered leaderboard of most reported addresses
+- 🌐 **Public REST API** — Developers can integrate wallet risk scoring into their own apps
+
+---
 
 ## Commands
 
-- `/start` — Main menu
-- `/check <address>` — Analyze a TON wallet
-- `/scan <message>` — Scan text for scam patterns
-- `/help` — Help
+| Command | Description |
+|---|---|
+| `/check <address>` | Analyze a TON wallet with AI |
+| `/scan <message>` | Scan text for scam patterns |
+| `/report <address>` | Report a scam wallet |
+| `/top10` | Most reported scam wallets |
+| `/stats` | Community statistics |
+| `/help` | How to use |
 
-## Setup
+---
 
-### Local
+## Architecture
 
-```bash
-git clone https://github.com/yourusername/ton-security-agent
-cd ton-security-agent
-pip install -r requirements.txt
-cp .env.example .env
-# Edit .env with your tokens
-python bot.py
+```
+User → Telegram Bot → MCP Agentic Loop
+                           ↓
+                    Groq AI (Llama 3.3 70B)
+                    ↙        ↓        ↘
+             TONCenter   Scam DB   Phishing
+               API       SQLite    Scanner
 ```
 
-### Railway Deploy
+The AI agent autonomously decides which tools to call, executes them, and synthesizes results — no hardcoded logic.
 
-1. Fork this repo
-2. Connect to Railway
-3. Add environment variables:
-   - `BOT_TOKEN` — from @BotFather
-   - `TONCENTER_API_KEY` — from toncenter.com (optional)
-4. Deploy!
+---
 
-## Environment Variables
+## Public API
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `BOT_TOKEN` | ✅ | Telegram bot token from @BotFather |
-| `TONCENTER_API_KEY` | ⚪ | TON Center API key (optional, for higher rate limits) |
+```
+GET https://atios.pythonanywhere.com/wallet_risk/<address>
+```
 
-## Built For
+**Response:**
+```json
+{
+  "address": "UQC...",
+  "score": 85,
+  "verdict": "SAFE",
+  "risks": []
+}
+```
 
-TON AI Hackathon 2026 — Track 1: Agent Infrastructure
+---
 
 ## Tech Stack
 
-- Python 3.11
-- python-telegram-bot 21.3
-- httpx
-- TON Center API v2
+- **AI:** Groq API — `llama-3.3-70b-versatile`
+- **Bot:** Python + Flask (webhook)
+- **Blockchain:** TONCenter API v2
+- **Database:** SQLite (community scam reports)
+- **Hosting:** PythonAnywhere (free tier, 24/7)
+
+---
+
+## Setup
+
+```bash
+git clone https://github.com/Atakanus/ton-security-agent
+cd ton-security-agent
+pip install -r requirements.txt
+```
+
+Environment variables:
+```
+BOT_TOKEN=your_telegram_bot_token
+GROQ_API_KEY=your_groq_api_key
+```
+
+---
+
+## Why This Matters
+
+For Web3 to reach mass adoption, security must be invisible. By embedding AI-powered safety directly into Telegram — the primary entry point for TON users — this agent provides the infrastructure layer that gives users confidence to transact freely.
+
+---
+
+*Built with ❤️ for the TON ecosystem*
