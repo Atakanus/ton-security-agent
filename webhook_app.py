@@ -54,6 +54,77 @@ def get_stats():
     conn.close()
     return total, unique
 
+async def format_wallet_analysis(address, wallet, txs, reports):
+    balance = wallet.get("balance_ton", 0)
+    state = wallet.get("state", "unknown")
+    tx_count = txs.get("count", 0)
+    total_reports = sum(r[0] for r in reports) if reports else 0
+    categories = [r[1] for r in reports] if reports else []
+
+    score = 100
+    threats = []
+
+    if total_reports > 0:
+        score -= min(60, total_reports * 15)
+        threats.append(f"🚫 Reported by {total_reports} community member(s): {', '.join(categories)}")
+    if state == "uninitialized":
+        score -= 10
+        threats.append("⚠️ Wallet never activated")
+    if balance == 0 and state == "active":
+        score -= 15
+        threats.append("💸 Balance drained to zero")
+    if tx_count > 100:
+        score -= 10
+        threats.append("🔍 Abnormal transaction volume")
+
+    score = max(0, score)
+    pattern_matches = min(3, total_reports) if total_reports > 0 else 0
+
+    if score >= 80:
+        confidence = min(99, 85 + tx_count // 10)
+        verdict_emoji = "🟢"
+        verdict_text = "SAFE"
+    elif score >= 50:
+        confidence = min(99, 60 + total_reports * 5)
+        verdict_emoji = "🟡"
+        verdict_text = "SUSPICIOUS"
+    else:
+        confidence = min(99, 75 + total_reports * 5)
+        verdict_emoji = "🔴"
+        verdict_text = "CRITICAL"
+
+    risk = 100 - score
+    filled = risk // 10
+    bar = "█" * filled + "░" * (10 - filled)
+    short_addr = f"{address[:10]}...{address[-6:]}"
+
+    lines = [
+        f"🛡️ *TON SECURITY AGENT — AI ANALYSIS*\n",
+        f"📍 `{short_addr}`\n",
+        f"{verdict_emoji} *RISK SCORE: {risk}/100*",
+        f"`[{bar}]`\n",
+        f"🤖 *SCAM PROBABILITY: {verdict_text}* {verdict_emoji}",
+        f"📊 AI Confidence: {confidence}%\n",
+    ]
+
+    if threats:
+        lines.append("🚨 *THREAT ASSESSMENT:*")
+        for t in threats:
+            lines.append(t)
+        lines.append("")
+
+    if pattern_matches > 0:
+        lines.append(f"🔍 Matches {pattern_matches} known scam pattern(s)\n")
+
+    lines.extend([
+        "📈 *WALLET HEALTH:*",
+        f"• Balance: `{balance:.2f} TON`",
+        f"• State: `{state}`",
+        f"• Transactions: `{tx_count}`",
+    ])
+
+    return "\n".join(lines)
+
 # ─── MCP TOOLS ──────────────────────────────────────────────
 MCP_TOOLS = [
     {
@@ -303,9 +374,12 @@ async def process_update(update):
         address = text[7:].strip()
         await send_typing(chat_id)
         await send_msg(chat_id, "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_")
-        query = f"Analyze this TON wallet address for security risks: {address}"
-        result = await mcp_agent(query)
-        kb = [[{"text": "🚨 Report this wallet", "callback_data": f"rep_start_{address[:20]}"}]]
+        wallet = await _get_wallet(address)
+        txs = await _get_txs(address)
+        reports = get_scam_reports(address)
+        result = await format_wallet_analysis(address, wallet, txs, reports)
+        kb = [[{"text": "🚨 Report this wallet", "callback_data": f"rep_inv_{address}"},
+               {"text": "✅ Looks Safe", "callback_data": f"safe_{address[:20]}"}]]
         await send_msg(chat_id, result, kb)
 
     elif text.startswith("/report "):
@@ -313,11 +387,11 @@ async def process_update(update):
         if not address:
             await send_msg(chat_id, "Usage: /report <address>"); return
         keyboard = [
-            [{"text": "💰 Investment Scam", "callback_data": f"rep_inv_{address[:20]}"},
-             {"text": "🎁 Fake Airdrop", "callback_data": f"rep_air_{address[:20]}"}],
-            [{"text": "👤 Impersonation", "callback_data": f"rep_imp_{address[:20]}"},
-             {"text": "🔧 Fake Support", "callback_data": f"rep_fak_{address[:20]}"}],
-            [{"text": "💸 Rugpull", "callback_data": f"rep_rug_{address[:20]}"}]
+            [{"text": "💰 Investment Scam", "callback_data": f"rep_inv_{address}"},
+             {"text": "🎁 Fake Airdrop", "callback_data": f"rep_air_{address}"}],
+            [{"text": "👤 Impersonation", "callback_data": f"rep_imp_{address}"},
+             {"text": "🔧 Fake Support", "callback_data": f"rep_fak_{address}"}],
+            [{"text": "💸 Rugpull", "callback_data": f"rep_rug_{address}"}]
         ]
         await send_msg(chat_id, f"📋 *Report Wallet*\n`{address[:12]}...`\n\nSelect scam category:", keyboard)
 
@@ -332,9 +406,12 @@ async def process_update(update):
     elif (text.startswith("EQ") or text.startswith("UQ")) and len(text) > 30:
         await send_typing(chat_id)
         await send_msg(chat_id, "🔍 *Analyzing...*\n_AI agent querying blockchain_")
-        query = f"Analyze this TON wallet address for security risks: {text}"
-        result = await mcp_agent(query)
-        kb = [[{"text": "🚨 Report this wallet", "callback_data": f"rep_start_{text[:20]}"}]]
+        wallet = await _get_wallet(text)
+        txs = await _get_txs(text)
+        reports = get_scam_reports(text)
+        result = await format_wallet_analysis(text, wallet, txs, reports)
+        kb = [[{"text": "🚨 Report this wallet", "callback_data": f"rep_inv_{text[:20]}"},
+               {"text": "✅ Looks Safe", "callback_data": f"safe_{text[:20]}"}]]
         await send_msg(chat_id, result, kb)
 
     else:
