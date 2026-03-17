@@ -77,12 +77,29 @@ def set_lang(user_id, lang):
     c.execute('INSERT OR REPLACE INTO user_lang (user_id, lang) VALUES (?,?)', (user_id, lang))
     conn.commit(); conn.close()
 
+
+def register_user(user_id, lang='en'):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('INSERT OR IGNORE INTO users (user_id, lang) VALUES (?,?)', (user_id, lang))
+    conn.commit(); conn.close()
+
+def get_user_count():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT COUNT(*) FROM users')
+    total = c.fetchone()[0]
+    c.execute("SELECT COUNT(*) FROM users WHERE first_seen >= datetime('now', '-7 days')")
+    weekly = c.fetchone()[0]
+    conn.close()
+    return total, weekly
+
 TEXTS = {
     'en': {
         'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
         'analyzing': "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_",
         'scanning': "🔍 *Scanning message...*",
-        'stats': "📊 *Community Stats*\n\n🚨 Total reports: `{total}`\n💀 Unique scam wallets: `{unique}`\n\nReport scams with /report!",
+        'stats': "📊 *Community Stats*\n\n👥 Total users: `{users}`\n📈 Weekly active: `{weekly}`\n\n🚨 Total reports: `{total}`\n💀 Unique scam wallets: `{unique}`\n\nReport scams with /report!",
         'no_reports': "📋 No scam reports yet!\n\nBe the first to report with /report",
         'top_title': "🏴‍☠️ *Top Reported Scam Wallets*\n",
         'report_title': "📋 *Report Wallet*\n`{addr}`\n\nSelect scam category:",
@@ -95,7 +112,7 @@ TEXTS = {
         'start': "🛡️ *TON Security Agent*\n\nИИ-защита для экосистемы TON.\n\n*Команды:*\n/check `<адрес>` — Анализ кошелька\n/scan `<сообщение>` — Проверка на скам\n/report `<адрес>` — Сообщить о скаме\n/top10 — Топ скам-кошельков\n/stats — Статистика\n/help — Помощь\n/lang — Сменить язык\n\nИли просто отправьте TON-адрес!",
         'analyzing': "🔍 *Анализирую кошелёк...*\n_ИИ запрашивает блокчейн_",
         'scanning': "🔍 *Проверяю сообщение...*",
-        'stats': "📊 *Статистика сообщества*\n\n🚨 Всего жалоб: `{total}`\n💀 Скам-кошельков: `{unique}`\n\nСообщайте о скамах: /report",
+        'stats': "📊 *Статистика сообщества*\n\n👥 Пользователей: `{users}`\n📈 За неделю: `{weekly}`\n\n🚨 Всего жалоб: `{total}`\n💀 Скам-кошельков: `{unique}`\n\nСообщайте о скамах: /report",
         'no_reports': "📋 Жалоб пока нет!\n\nБудьте первым: /report",
         'top_title': "🏴‍☠️ *Топ скам-кошельков*\n",
         'report_title': "📋 *Сообщить о кошельке*\n`{addr}`\n\nВыберите тип:",
@@ -108,7 +125,7 @@ TEXTS = {
         'start': "🛡️ *TON Security Agent*\n\nTON生态系统的AI安全防护。\n\n*命令:*\n/check `<地址>` — 分析钱包\n/scan `<消息>` — 扫描诈骗\n/report `<地址>` — 举报诈骗\n/top10 — 最多举报钱包\n/stats — 社区统计\n/help — 帮助\n/lang — 切换语言\n\n或直接发送TON地址！",
         'analyzing': "🔍 *分析钱包中...*\n_AI正在查询区块链_",
         'scanning': "🔍 *扫描消息中...*",
-        'stats': "📊 *社区统计*\n\n🚨 总举报数: `{total}`\n💀 诈骗钱包: `{unique}`\n\n用 /report 举报！",
+        'stats': "📊 *社区统计*\n\n👥 总用户数: `{users}`\n📈 本周活跃: `{weekly}`\n\n🚨 总举报数: `{total}`\n💀 诈骗钱包: `{unique}`\n\n用 /report 举报！",
         'no_reports': "📋 暂无举报！\n\n使用 /report 成为第一个举报者",
         'top_title': "🏴‍☠️ *最多举报诈骗钱包*\n",
         'report_title': "📋 *举报钱包*\n`{addr}`\n\n选择类型:",
@@ -398,6 +415,7 @@ async def process_update(update):
         return
 
     if text == "/start":
+        register_user(user_id)
         lang_kb = [[
             {"text": "🇬🇧 English", "callback_data": "lang_en"},
             {"text": "🇷🇺 Русский", "callback_data": "lang_ru"},
@@ -418,7 +436,8 @@ async def process_update(update):
 
     elif text == "/stats":
         total, unique = get_stats()
-        await send_msg(chat_id, t(user_id, 'stats', total=total, unique=unique))
+        users, weekly = get_user_count()
+        await send_msg(chat_id, t(user_id, 'stats', total=total, unique=unique, users=users, weekly=weekly))
 
     elif text == "/top10":
         top = get_top_scams(10)
@@ -543,3 +562,11 @@ def webhook():
 
 init_db()
 init_lang_db()
+
+def init_users_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS users (user_id INTEGER PRIMARY KEY, first_seen DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit(); conn.close()
+
+init_users_db()
