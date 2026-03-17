@@ -54,6 +54,79 @@ def get_stats():
     conn.close()
     return total, unique
 
+
+# ─── LANGUAGE SYSTEM ────────────────────────────────────────
+def init_lang_db():
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS user_lang
+                 (user_id INTEGER PRIMARY KEY, lang TEXT DEFAULT \'en\')''')
+    conn.commit(); conn.close()
+
+def get_lang(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('SELECT lang FROM user_lang WHERE user_id=?', (user_id,))
+    r = c.fetchone()
+    conn.close()
+    return r[0] if r else 'en'
+
+def set_lang(user_id, lang):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute('INSERT OR REPLACE INTO user_lang (user_id, lang) VALUES (?,?)', (user_id, lang))
+    conn.commit(); conn.close()
+
+TEXTS = {
+    'en': {
+        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
+        'analyzing': "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_",
+        'scanning': "🔍 *Scanning message...*",
+        'stats': "📊 *Community Stats*\n\n🚨 Total reports: `{total}`\n💀 Unique scam wallets: `{unique}`\n\nReport scams with /report!",
+        'no_reports': "📋 No scam reports yet!\n\nBe the first to report with /report",
+        'top_title': "🏴‍☠️ *Top Reported Scam Wallets*\n",
+        'report_title': "📋 *Report Wallet*\n`{addr}`\n\nSelect scam category:",
+        'reported': "✅ *Reported!*\n`{addr}` as `{cat}`\n\nThank you for keeping TON safe! 🛡️",
+        'report_btn': ["💰 Investment Scam", "🎁 Fake Airdrop", "👤 Impersonation", "🔧 Fake Support", "💸 Rugpull"],
+        'lang_select': "🌐 *Select Language:*",
+        'lang_set': "✅ Language set to English!",
+    },
+    'ru': {
+        'start': "🛡️ *TON Security Agent*\n\nИИ-защита для экосистемы TON.\n\n*Команды:*\n/check `<адрес>` — Анализ кошелька\n/scan `<сообщение>` — Проверка на скам\n/report `<адрес>` — Сообщить о скаме\n/top10 — Топ скам-кошельков\n/stats — Статистика\n/help — Помощь\n/lang — Сменить язык\n\nИли просто отправьте TON-адрес!",
+        'analyzing': "🔍 *Анализирую кошелёк...*\n_ИИ запрашивает блокчейн_",
+        'scanning': "🔍 *Проверяю сообщение...*",
+        'stats': "📊 *Статистика сообщества*\n\n🚨 Всего жалоб: `{total}`\n💀 Скам-кошельков: `{unique}`\n\nСообщайте о скамах: /report",
+        'no_reports': "📋 Жалоб пока нет!\n\nБудьте первым: /report",
+        'top_title': "🏴‍☠️ *Топ скам-кошельков*\n",
+        'report_title': "📋 *Сообщить о кошельке*\n`{addr}`\n\nВыберите тип:",
+        'reported': "✅ *Жалоба отправлена!*\n`{addr}` — `{cat}`\n\nСпасибо за защиту TON! 🛡️",
+        'report_btn': ["💰 Инвест-скам", "🎁 Фейк аирдроп", "👤 Имперсонация", "🔧 Фейк поддержка", "💸 Ругпул"],
+        'lang_select': "🌐 *Выберите язык:*",
+        'lang_set': "✅ Язык изменён на Русский!",
+    },
+    'zh': {
+        'start': "🛡️ *TON Security Agent*\n\nTON生态系统的AI安全防护。\n\n*命令:*\n/check `<地址>` — 分析钱包\n/scan `<消息>` — 扫描诈骗\n/report `<地址>` — 举报诈骗\n/top10 — 最多举报钱包\n/stats — 社区统计\n/help — 帮助\n/lang — 切换语言\n\n或直接发送TON地址！",
+        'analyzing': "🔍 *分析钱包中...*\n_AI正在查询区块链_",
+        'scanning': "🔍 *扫描消息中...*",
+        'stats': "📊 *社区统计*\n\n🚨 总举报数: `{total}`\n💀 诈骗钱包: `{unique}`\n\n用 /report 举报！",
+        'no_reports': "📋 暂无举报！\n\n使用 /report 成为第一个举报者",
+        'top_title': "🏴‍☠️ *最多举报诈骗钱包*\n",
+        'report_title': "📋 *举报钱包*\n`{addr}`\n\n选择类型:",
+        'reported': "✅ *已举报！*\n`{addr}` — `{cat}`\n\n感谢保护TON安全！🛡️",
+        'report_btn': ["💰 投资诈骗", "🎁 假空投", "👤 冒充他人", "🔧 假客服", "💸 跑路"],
+        'lang_select': "🌐 *选择语言:*",
+        'lang_set': "✅ 语言已切换为中文！",
+    }
+}
+
+def t(user_id, key, **kwargs):
+    lang = get_lang(user_id)
+    text = TEXTS.get(lang, TEXTS['en']).get(key, TEXTS['en'].get(key, key))
+    if kwargs:
+        text = text.format(**kwargs)
+    return text
+
+
 async def format_wallet_analysis(address, wallet, txs, reports):
     balance = wallet.get("balance_ton", 0)
     state = wallet.get("state", "unknown")
@@ -325,47 +398,34 @@ async def process_update(update):
         return
 
     if text == "/start":
-        await send_msg(chat_id,
-            "🛡️ *TON Security Agent*\n\n"
-            "AI-powered security for the TON ecosystem.\n\n"
-            "*Commands:*\n"
-            "/check `<address>` — Analyze wallet\n"
-            "/scan `<message>` — Scan for scams\n"
-            "/report `<address>` — Report scam wallet\n"
-            "/top10 — Most reported scam wallets\n"
-            "/stats — Community statistics\n"
-            "/help — How to use\n\n"
-            "Or just send a TON address directly!")
+        lang_kb = [[
+            {"text": "🇬🇧 English", "callback_data": "lang_en"},
+            {"text": "🇷🇺 Русский", "callback_data": "lang_ru"},
+            {"text": "🇨🇳 中文", "callback_data": "lang_zh"}
+        ]]
+        await send_msg(chat_id, t(user_id, 'start'), lang_kb)
+
+    elif text == "/lang":
+        lang_kb = [[
+            {"text": "🇬🇧 English", "callback_data": "lang_en"},
+            {"text": "🇷🇺 Русский", "callback_data": "lang_ru"},
+            {"text": "🇨🇳 中文", "callback_data": "lang_zh"}
+        ]]
+        await send_msg(chat_id, t(user_id, 'lang_select'), lang_kb)
 
     elif text == "/help":
-        await send_msg(chat_id,
-            "📖 *How to use TON Security Agent*\n\n"
-            "1️⃣ *Check a wallet:*\n"
-            "Send any TON address or use /check\n\n"
-            "2️⃣ *Scan a message:*\n"
-            "`/scan send me 1 TON get 10 back`\n\n"
-            "3️⃣ *Report a scammer:*\n"
-            "`/report EQD...address`\n"
-            "Then select the scam category\n\n"
-            "4️⃣ *See top scams:*\n"
-            "/top10\n\n"
-            "🤖 Powered by Groq AI + TONCenter API\n"
-            "📂 Open source: github.com/Atakanus/ton-security-agent")
+        await send_msg(chat_id, t(user_id, 'start'))
 
     elif text == "/stats":
         total, unique = get_stats()
-        await send_msg(chat_id,
-            f"📊 *Community Stats*\n\n"
-            f"🚨 Total reports: `{total}`\n"
-            f"💀 Unique scam wallets: `{unique}`\n\n"
-            f"Report scams with /report!")
+        await send_msg(chat_id, t(user_id, 'stats', total=total, unique=unique))
 
     elif text == "/top10":
         top = get_top_scams(10)
         if not top:
-            await send_msg(chat_id, "📋 No scam reports yet!\n\nBe the first to report with /report")
+            await send_msg(chat_id, t(user_id, 'no_reports'))
             return
-        lines = ["🏴‍☠️ *Top Reported Scam Wallets*\n"]
+        lines = [t(user_id, 'top_title')]
         for i, (addr, cnt) in enumerate(top, 1):
             lines.append(f"`{i}.` `{addr[:12]}...` — {cnt} report(s)")
         await send_msg(chat_id, "\n".join(lines))
@@ -373,7 +433,7 @@ async def process_update(update):
     elif text.startswith("/check "):
         address = text[7:].strip()
         await send_typing(chat_id)
-        await send_msg(chat_id, "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_")
+        await send_msg(chat_id, t(user_id, 'analyzing'))
         wallet = await _get_wallet(address)
         txs = await _get_txs(address)
         reports = get_scam_reports(address)
@@ -386,19 +446,20 @@ async def process_update(update):
         address = text[8:].strip()
         if not address:
             await send_msg(chat_id, "Usage: /report <address>"); return
+        btns = t(user_id, 'report_btn')
         keyboard = [
-            [{"text": "💰 Investment Scam", "callback_data": f"rep_inv_{address}"},
-             {"text": "🎁 Fake Airdrop", "callback_data": f"rep_air_{address}"}],
-            [{"text": "👤 Impersonation", "callback_data": f"rep_imp_{address}"},
-             {"text": "🔧 Fake Support", "callback_data": f"rep_fak_{address}"}],
-            [{"text": "💸 Rugpull", "callback_data": f"rep_rug_{address}"}]
+            [{"text": btns[0], "callback_data": f"rep_inv_{address}"},
+             {"text": btns[1], "callback_data": f"rep_air_{address}"}],
+            [{"text": btns[2], "callback_data": f"rep_imp_{address}"},
+             {"text": btns[3], "callback_data": f"rep_fak_{address}"}],
+            [{"text": btns[4], "callback_data": f"rep_rug_{address}"}]
         ]
-        await send_msg(chat_id, f"📋 *Report Wallet*\n`{address[:12]}...`\n\nSelect scam category:", keyboard)
+        await send_msg(chat_id, t(user_id, 'report_title', addr=address[:12]+'...'), keyboard)
 
     elif text.startswith("/scan "):
         msg_text = text[6:]
         await send_typing(chat_id)
-        await send_msg(chat_id, "🔍 *Scanning message...*")
+        await send_msg(chat_id, t(user_id, 'scanning'))
         query = f"Analyze this message for TON scam patterns: {msg_text}"
         result = await mcp_agent(query)
         await send_msg(chat_id, result)
@@ -429,7 +490,13 @@ async def process_callback(cb):
         await c.post(f"https://api.telegram.org/bot{BOT_TOKEN}/answerCallbackQuery",
                     json={"callback_query_id": cb_id})
 
-    if data.startswith("rep_"):
+    if data.startswith("lang_"):
+        lang = data.split("_")[1]
+        set_lang(user_id, lang)
+        lang_names = {"en": "✅ Language set to English!", "ru": "✅ Язык изменён на Русский!", "zh": "✅ 语言已切换为中文！"}
+        await send_msg(chat_id, lang_names.get(lang, "✅ Done!"))
+
+    elif data.startswith("rep_"):
         parts = data.split("_", 2)
         if len(parts) == 3 and parts[1] != "start":
             category_map = {"inv": "investment", "air": "airdrop", "imp": "impersonation",
@@ -437,9 +504,7 @@ async def process_callback(cb):
             category = category_map.get(parts[1], parts[1])
             address = parts[2]
             add_scam_report(address, user_id, category)
-            await send_msg(chat_id,
-                f"✅ *Reported!*\n`{address[:12]}...` as `{category}`\n\n"
-                f"Thank you for keeping TON safe! 🛡️")
+            await send_msg(chat_id, t(user_id, 'reported', addr=address[:12]+'...', cat=category))
 
 # ─── ROUTES ─────────────────────────────────────────────────
 @app.route("/")
@@ -477,3 +542,4 @@ def webhook():
     return "ok", 200
 
 init_db()
+init_lang_db()
