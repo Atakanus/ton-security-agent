@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TON Security Agent — Demo</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;700;800&display=swap');
+
+  :root {
+    --bg: #050a14;
+    --surface: #0a1628;
+    --border: #0d2040;
+    --ton: #0098ea;
+    --ton-glow: rgba(0,152,234,0.3);
+    --green: #00e676;
+    --green-glow: rgba(0,230,118,0.2);
+    --yellow: #ffd740;
+    --red: #ff5252;
+    --text: #e8f4fd;
+    --muted: #4a7a9b;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,152,234,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,152,234,0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+    animation: fadeDown 0.8s ease both;
+  }
+
+  .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .shield {
+    width: 56px;
+    height: 56px;
+    filter: drop-shadow(0 0 20px var(--ton));
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  .brand {
+    font-size: 2.2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    background: linear-gradient(135deg, #fff 0%, var(--ton) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .tagline {
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .badge {
+    display: inline-block;
+    margin-top: 16px;
+    padding: 6px 16px;
+    background: rgba(0,152,234,0.1);
+    border: 1px solid var(--ton);
+    border-radius: 20px;
+    font-size: 0.75rem;
+    color: var(--ton);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  /* Demo sections */
+  .section {
+    margin-bottom: 50px;
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s ease;
+  }
+
+  .section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ton);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+  }
+
+  /* Chat mockup */
+  .chat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5), 0 0 40px rgba(0,152,234,0.05);
+  }
+
+  .chat-header {
+    padding: 14px 20px;
+    background: rgba(0,152,234,0.08);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--ton), #0066cc);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    box-shadow: 0 0 15px var(--ton-glow);
+  }
+
+  .chat-name { font-weight: 700; font-size: 0.95rem; }
+  .chat-status {
+    font-size: 0.7rem;
+    color: var(--green);
+    font-family: 'Space Mono', monospace;
+  }
+
+  .chat-body { padding: 24px 20px; }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    animation: fadeIn 0.4s ease both;
+  }
+
+  .msg.user { flex-direction: row-reverse; }
+
+  .msg-bubble {
+    max-width: 75%;
+    padding: 12px 16px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .msg.bot .msg-bubble {
+    background: rgba(0,152,234,0.1);
+    border: 1px solid rgba(0,152,234,0.2);
+    border-radius: 4px 12px 12px 12px;
+  }
+
+  .msg.user .msg-bubble {
+    background: rgba(0,152,234,0.2);
+    border: 1px solid rgba(0,152,234,0.3);
+    border-radius: 12px 4px 12px 12px;
+    text-align: right;
+  }
+
+  .msg-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+
+  code {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    background: rgba(0,152,234,0.15);
+    padding: 2px 6px;
+    border-radius: 4px;
+    color: var(--ton);
+  }
+
+  /* Analysis card */
+  .analysis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+
+  .card-header {
+    padding: 16px 20px;
+    background: rgba(0,152,234,0.06);
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--ton);
+    letter-spacing: 1px;
+  }
+
+  .card-body { padding: 24px 20px; }
+
+  .address-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px 14px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+  }
+
+  .address-text {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+  }
+
+  .risk-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .risk-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .risk-score {
+    font-size: 1.4rem;
+    font-weight: 800;
+    color: var(--red);
+  }
+
+  .risk-score.safe { color: var(--green); }
+  .risk-score.warn { color: var(--yellow); }
+
+  .progress-bar {
+    height: 8px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 1.5s cubic-bezier(0.4,0,0.2,1);
+    width: 0%;
+  }
+
+  .progress-fill.danger { background: linear-gradient(90deg, var(--red), #ff1744); box-shadow: 0 0 10px var(--red); }
+  .progress-fill.safe { background: linear-gradient(90deg, var(--green), #00c853); box-shadow: 0 0 10px var(--green); }
+  .progress-fill.warn { background: linear-gradient(90deg, var(--yellow), #ffab00); box-shadow: 0 0 10px var(--yellow); }
+
+  .verdict-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+
+  .verdict-badge.dangerous {
+    background: rgba(255,82,82,0.1);
+    border: 1px solid var(--red);
+    color: var(--red);
+  }
+
+  .verdict-badge.safe {
+    background: rgba(0,230,118,0.1);
+    border: 1px solid var(--green);
+    color: var(--green);
+  }
+
+  .threat-list { margin-bottom: 20px; }
+
+  .threat-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 14px;
+    background: rgba(255,82,82,0.05);
+    border-left: 3px solid var(--red);
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    animation: slideIn 0.4s ease both;
+  }
+
+  .health-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .health-item {
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .health-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+  }
+
+  .health-value {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+
+  /* Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card {
+    padding: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+
+  .stat-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--ton);
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--ton), transparent);
+  }
+
+  .stat-number {
+    font-size: 2.2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #fff, var(--ton));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  /* Features */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .feature-card {
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    transition: all 0.3s ease;
+  }
+
+  .feature-card:hover {
+    border-color: var(--ton);
+    background: rgba(0,152,234,0.05);
+    transform: translateX(4px);
+  }
+
+  .feature-icon {
+    font-size: 1.8rem;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px var(--ton-glow));
+  }
+
+  .feature-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    margin-bottom: 6px;
+  }
+
+  .feature-desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* CTA */
+  .cta {
+    text-align: center;
+    padding: 50px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at center, rgba(0,152,234,0.08) 0%, transparent 60%);
+    animation: rotate 8s linear infinite;
+  }
+
+  .cta-title {
+    font-size: 2rem;
+    font-weight: 800;
+    margin-bottom: 12px;
+    position: relative;
+  }
+
+  .cta-sub {
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    margin-bottom: 28px;
+    position: relative;
+  }
+
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 32px;
+    background: var(--ton);
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 1rem;
+    text-decoration: none;
+    position: relative;
+    transition: all 0.3s ease;
+    box-shadow: 0 0 30px var(--ton-glow);
+  }
+
+  .cta-btn:hover {
+    background: #00b0ff;
+    transform: translateY(-2px);
+    box-shadow: 0 0 50px var(--ton-glow);
+  }
+
+  .lang-badges {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 20px;
+    position: relative;
+  }
+
+  .lang-badge {
+    padding: 6px 14px;
+    background: rgba(0,0,0,0.3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--muted);
+  }
+
+  /* Animations */
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { filter: drop-shadow(0 0 15px var(--ton)); }
+    50% { filter: drop-shadow(0 0 30px var(--ton)); }
+  }
+
+  @keyframes rotate {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: var(--ton);
+    margin-left: 2px;
+    animation: blink 1s infinite;
+    vertical-align: middle;
+  }
+
+  /* Typing indicator */
+  .typing {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    padding: 10px 14px;
+  }
+
+  .typing span {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--ton);
+    animation: bounce 1.2s ease infinite;
+  }
+
+  .typing span:nth-child(2) { animation-delay: 0.2s; }
+  .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes bounce {
+    0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+    40% { transform: translateY(-6px); opacity: 1; }
+  }
+
+  @media (max-width: 600px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .features-grid { grid-template-columns: 1fr; }
+    .health-grid { grid-template-columns: repeat(2, 1fr); }
+    .brand { font-size: 1.6rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <svg class="shield" viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M50 5 L90 22 L90 60 C90 85 70 105 50 115 C30 105 10 85 10 60 L10 22 Z" fill="rgba(0,152,234,0.15)" stroke="#0098ea" stroke-width="2"/>
+        <path d="M50 25 L72 35 L72 58 C72 72 62 84 50 90 C38 84 28 72 28 58 L28 35 Z" fill="rgba(0,152,234,0.1)" stroke="rgba(0,152,234,0.5)" stroke-width="1.5"/>
+        <!-- TON diamond -->
+        <polygon points="50,38 62,50 50,68 38,50" fill="#e8f4fd" stroke="#0098ea" stroke-width="1"/>
+        <line x1="38" y1="50" x2="62" y2="50" stroke="rgba(0,152,234,0.6)" stroke-width="1"/>
+        <line x1="50" y1="38" x2="38" y2="50" stroke="rgba(0,152,234,0.4)" stroke-width="0.8"/>
+        <line x1="50" y1="38" x2="62" y2="50" stroke="rgba(0,152,234,0.4)" stroke-width="0.8"/>
+      </svg>
+      <div>
+        <div class="brand">TON Security Agent</div>
+      </div>
+    </div>
+    <div class="tagline">AI-Powered Blockchain Security • TON AI Hackathon 2026</div>
+    <div class="badge">🏆 AGENT INFRASTRUCTURE — TRACK 1 • FIRST OF ITS KIND</div>
+  </div>
+
+  <!-- Chat Demo -->
+  <div class="section" id="s1">
+    <div class="section-label">01 — Live Demo</div>
+    <div class="chat">
+      <div class="chat-header">
+        <div class="chat-avatar">🛡️</div>
+        <div>
+          <div class="chat-name">TON Security Agent</div>
+          <div class="chat-status">● online — 24/7 active</div>
+        </div>
+      </div>
+      <div class="chat-body" id="chatBody">
+        <div class="msg user" style="animation-delay:0.2s">
+          <div class="msg-icon">👤</div>
+          <div class="msg-bubble"><code>/check EQD2NmD_lH5f5u1Kj3KfGyTvhZSX0Eg...</code></div>
+        </div>
+        <div class="msg bot" style="animation-delay:0.6s">
+          <div class="msg-icon">🛡️</div>
+          <div class="msg-bubble">
+            🔍 <strong>Analyzing wallet...</strong><br>
+            <span style="color:var(--muted);font-size:0.8rem;font-family:'Space Mono',monospace">AI agent querying blockchain</span>
+            <div class="typing"><span></span><span></span><span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analysis Result -->
+  <div class="section" id="s2">
+    <div class="section-label">02 — Analysis Result</div>
+    <div class="analysis-card">
+      <div class="card-header">🛡️ TON SECURITY AGENT — AI ANALYSIS</div>
+      <div class="card-body">
+        <div class="address-row">
+          <span>📍</span>
+          <span class="address-text">EQD2NmD_lH5...XxOG3M</span>
+        </div>
+
+        <div class="risk-row">
+          <span class="risk-label">Risk Score</span>
+          <span class="risk-score" id="riskScore">87/100</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill danger" id="progressFill"></div>
+        </div>
+
+        <div class="verdict-badge dangerous">🔴 SCAM PROBABILITY: CRITICAL &nbsp;•&nbsp; AI Confidence: 94%</div>
+
+        <div class="threat-list">
+          <div class="threat-item" style="animation-delay:0.1s">🚫 Reported by 12 community members: investment, rugpull</div>
+          <div class="threat-item" style="animation-delay:0.2s">🔍 Matches 3 known scam patterns</div>
+          <div class="threat-item" style="animation-delay:0.3s">💸 Balance drained to zero</div>
+        </div>
+
+        <div class="health-grid">
+          <div class="health-item">
+            <div class="health-label">Balance</div>
+            <div class="health-value">0.00 TON</div>
+          </div>
+          <div class="health-item">
+            <div class="health-label">State</div>
+            <div class="health-value" style="color:var(--red)">active</div>
+          </div>
+          <div class="health-item">
+            <div class="health-label">Transactions</div>
+            <div class="health-value">45</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Safe wallet example -->
+  <div class="section" id="s3">
+    <div class="section-label">03 — Safe Wallet Example</div>
+    <div class="analysis-card">
+      <div class="card-header">🛡️ TON SECURITY AGENT — AI ANALYSIS</div>
+      <div class="card-body">
+        <div class="address-row">
+          <span>📍</span>
+          <span class="address-text">UQCffectTP...mTZ3sT</span>
+        </div>
+        <div class="risk-row">
+          <span class="risk-label">Risk Score</span>
+          <span class="risk-score safe">5/100</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill safe" id="progressFill2"></div>
+        </div>
+        <div class="verdict-badge safe">🟢 SCAM PROBABILITY: SAFE &nbsp;•&nbsp; AI Confidence: 97%</div>
+        <div class="health-grid">
+          <div class="health-item">
+            <div class="health-label">Balance</div>
+            <div class="health-value" style="color:var(--green)">1,240 TON</div>
+          </div>
+          <div class="health-item">
+            <div class="health-label">State</div>
+            <div class="health-value" style="color:var(--green)">active</div>
+          </div>
+          <div class="health-item">
+            <div class="health-label">Transactions</div>
+            <div class="health-value">128</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="section" id="s4">
+    <div class="section-label">04 — Community Stats</div>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number" data-target="1">0</div>
+        <div class="stat-label">Active Users</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="5">0</div>
+        <div class="stat-label">Scam Reports</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number" data-target="3">0</div>
+        <div class="stat-label">Scam Wallets</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Features -->
+  <div class="section" id="s5">
+    <div class="section-label">05 — Features</div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <div>
+          <div class="feature-title">MCP Agentic Loop</div>
+          <div class="feature-desc">AI autonomously calls tools — wallet info, transaction history, scam DB — and synthesizes results. No hardcoded logic.</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔍</div>
+        <div>
+          <div class="feature-title">Real-time Wallet Analysis</div>
+          <div class="feature-desc">Live on-chain data via TONCenter API. Risk score 0-100 with full threat breakdown.</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🚨</div>
+        <div>
+          <div class="feature-title">Phishing Scanner</div>
+          <div class="feature-desc">Instant detection of phishing links, fake airdrops, and social engineering in any message.</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <div>
+          <div class="feature-title">Community Intelligence</div>
+          <div class="feature-desc">Crowd-sourced scam database. Users report wallets by category. Top 10 leaderboard.</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <div>
+          <div class="feature-title">3 Language Support</div>
+          <div class="feature-desc">Full support for English 🇬🇧, Russian 🇷🇺, and Chinese 🇨🇳. Auto-detects user preference.</div>
+        </div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔌</div>
+        <div>
+          <div class="feature-title">Public REST API</div>
+          <div class="feature-desc">Any developer can integrate wallet risk scoring. GET /wallet_risk/&lt;address&gt;</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA -->
+  <div class="section" id="s6">
+    <div class="cta">
+      <div class="cta-title">Try it now — it's free</div>
+      <div class="cta-sub">No installation • No wallet connection • Just send a message</div>
+      <a href="https://t.me/TONSecurityAgentBot" class="cta-btn" target="_blank">
+        🛡️ Open @TONSecurityAgentBot
+      </a>
+      <div class="lang-badges">
+        <span class="lang-badge">🇬🇧 English</span>
+        <span class="lang-badge">🇷🇺 Русский</span>
+        <span class="lang-badge">🇨🇳 中文</span>
+        <span class="lang-badge">⚡ Groq AI</span>
+        <span class="lang-badge">🔗 TONCenter API</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Intersection observer for sections
+  const sections = document.querySelectorAll('.section');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        // Animate progress bars
+        if (entry.target.id === 's2') {
+          setTimeout(() => {
+            document.getElementById('progressFill').style.width = '87%';
+          }, 300);
+        }
+        if (entry.target.id === 's3') {
+          setTimeout(() => {
+            document.getElementById('progressFill2').style.width = '5%';
+          }, 300);
+        }
+        // Animate counters
+        if (entry.target.id === 's4') {
+          document.querySelectorAll('[data-target]').forEach(el => {
+            const target = parseInt(el.dataset.target);
+            let current = 0;
+            const step = target / 30;
+            const timer = setInterval(() => {
+              current += step;
+              if (current >= target) {
+                current = target;
+                clearInterval(timer);
+              }
+              el.textContent = Math.floor(current);
+            }, 50);
+          });
+        }
+      }
+    });
+  }, { threshold: 0.15 });
+
+  sections.forEach(s => observer.observe(s));
+
+  // Show first section immediately
+  document.getElementById('s1').classList.add('visible');
+</script>
+
+</body>
+</html>
