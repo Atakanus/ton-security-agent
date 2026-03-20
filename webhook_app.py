@@ -155,7 +155,8 @@ def get_user_count():
 
 TEXTS = {
     'en': {
-        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/watchlist <address> — Watch wallet changes\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
+        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/ai <question> — Ask AI
+/watchlist <address> — Watch wallet changes\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
         'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n`/scan send me 1 TON get 10 back`\n\n3️⃣ *Report a scammer:*\n`/report EQD...address`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
         'analyzing': "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_",
         'scanning': "🔍 *Scanning message...*",
@@ -524,6 +525,26 @@ async def process_update(update):
         for i, (addr, cnt) in enumerate(top, 1):
             lines.append(f"`{i}.` `{addr[:12]}...` — {cnt} report(s)")
         await send_msg(chat_id, "\n".join(lines))
+    elif text.startswith('/ai '):
+        query = text[4:].strip()
+        await send_typing(chat_id)
+        async with httpx.AsyncClient() as c:
+            r = await c.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}"},
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [
+                        {"role": "system", "content": "You are a TON blockchain security expert. Be concise."},
+                        {"role": "user", "content": query}
+                    ],
+                    "max_tokens": 300
+                },
+                timeout=15
+            )
+            answer = r.json()["choices"][0]["message"]["content"]
+            await send_msg(chat_id, f"🤖 AI:\n\n{answer}")
+
     elif text.startswith("/watchlist"):
         parts = text.split()
         if len(parts) == 1:
