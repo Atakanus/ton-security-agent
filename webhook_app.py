@@ -1,3 +1,42 @@
+
+def add_watchlist(user_id, address):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS watchlist (user_id INTEGER, address TEXT, last_balance REAL, last_tx_count INTEGER, PRIMARY KEY(user_id, address))")
+    c.execute("INSERT OR IGNORE INTO watchlist (user_id, address, last_balance, last_tx_count) VALUES (?, ?, 0, 0)", (user_id, address))
+    conn.commit()
+    conn.close()
+
+def get_watchlist(user_id):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("CREATE TABLE IF NOT EXISTS watchlist (user_id INTEGER, address TEXT, last_balance REAL, last_tx_count INTEGER, PRIMARY KEY(user_id, address))")
+    c.execute("SELECT address FROM watchlist WHERE user_id=?", (user_id,))
+    rows = c.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+def remove_watchlist(user_id, address):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("DELETE FROM watchlist WHERE user_id=? AND address=?", (user_id, address))
+    conn.commit()
+    conn.close()
+
+def update_watchlist(user_id, address, balance, tx_count):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("UPDATE watchlist SET last_balance=?, last_tx_count=? WHERE user_id=? AND address=?", (balance, tx_count, user_id, address))
+    conn.commit()
+    conn.close()
+
+def get_watchlist_data(user_id, address):
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
+    c.execute("SELECT last_balance, last_tx_count FROM watchlist WHERE user_id=? AND address=?", (user_id, address))
+    row = c.fetchone()
+    conn.close()
+    return row
 import os, json, httpx, asyncio, sqlite3, re
 from flask import Flask, request, jsonify
 
@@ -116,8 +155,8 @@ def get_user_count():
 
 TEXTS = {
     'en': {
-        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
-        'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n\`/scan send me 1 TON get 10 back\`\n\n3️⃣ *Report a scammer:*\n\`/report EQD...address\`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
+        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/watchlist <address> — Watch wallet changes\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
+        'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n`/scan send me 1 TON get 10 back`\n\n3️⃣ *Report a scammer:*\n`/report EQD...address`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
         'analyzing': "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_",
         'scanning': "🔍 *Scanning message...*",
         'stats': "📊 *Community Stats*\n\n👥 Total users: `{users}`\n📈 Weekly active: `{weekly}`\n\n🚨 Total reports: `{total}`\n💀 Unique scam wallets: `{unique}`\n\nReport scams with /report!",
@@ -131,7 +170,7 @@ TEXTS = {
     },
     'ru': {
         'start': "🛡️ *TON Security Agent*\n\nИИ-защита для экосистемы TON.\n\n*Команды:*\n/check `<адрес>` — Анализ кошелька\n/scan `<сообщение>` — Проверка на скам\n/report `<адрес>` — Сообщить о скаме\n/top10 — Топ скам-кошельков\n/stats — Статистика\n/help — Помощь\n/lang — Сменить язык\n\nИли просто отправьте TON-адрес!",
-        'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n\`/scan send me 1 TON get 10 back\`\n\n3️⃣ *Report a scammer:*\n\`/report EQD...address\`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
+        'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n`/scan send me 1 TON get 10 back`\n\n3️⃣ *Report a scammer:*\n`/report EQD...address`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
         'analyzing': "🔍 *Анализирую кошелёк...*\n_ИИ запрашивает блокчейн_",
         'scanning': "🔍 *Проверяю сообщение...*",
         'stats': "📊 *Статистика сообщества*\n\n👥 Пользователей: `{users}`\n📈 За неделю: `{weekly}`\n\n🚨 Всего жалоб: `{total}`\n💀 Скам-кошельков: `{unique}`\n\nСообщайте о скамах: /report",
@@ -145,7 +184,7 @@ TEXTS = {
     },
     'zh': {
         'start': "🛡️ *TON Security Agent*\n\nTON生态系统的AI安全防护。\n\n*命令:*\n/check `<地址>` — 分析钱包\n/scan `<消息>` — 扫描诈骗\n/report `<地址>` — 举报诈骗\n/top10 — 最多举报钱包\n/stats — 社区统计\n/help — 帮助\n/lang — 切换语言\n\n或直接发送TON地址！",
-        'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n\`/scan send me 1 TON get 10 back\`\n\n3️⃣ *Report a scammer:*\n\`/report EQD...address\`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
+        'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n`/scan send me 1 TON get 10 back`\n\n3️⃣ *Report a scammer:*\n`/report EQD...address`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
         'analyzing': "🔍 *分析钱包中...*\n_AI正在查询区块链_",
         'scanning': "🔍 *扫描消息中...*",
         'stats': "📊 *社区统计*\n\n👥 总用户数: `{users}`\n📈 本周活跃: `{weekly}`\n\n🚨 总举报数: `{total}`\n💀 诈骗钱包: `{unique}`\n\n用 /report 举报！",
@@ -192,6 +231,11 @@ async def format_wallet_analysis(address, wallet, txs, reports, safe_votes=0):
 
     if safe_votes > 0:
         effective_reports = max(0, total_reports - safe_votes * 2)
+    effective_reports = 0
+    if reports:
+        total_r = sum(r[0] for r in reports)
+        safe_v = get_safe_votes(address) if callable(get_safe_votes) else 0
+        effective_reports = max(0, total_r - safe_v * 2)
     if reports and effective_reports > 0:
         score -= min(60, effective_reports * 15)
     score = max(0, score)
@@ -480,7 +524,23 @@ async def process_update(update):
         for i, (addr, cnt) in enumerate(top, 1):
             lines.append(f"`{i}.` `{addr[:12]}...` — {cnt} report(s)")
         await send_msg(chat_id, "\n".join(lines))
-
+    elif text.startswith("/watchlist"):
+        parts = text.split()
+        if len(parts) == 1:
+            wl = get_watchlist(user_id)
+            if not wl:
+                await send_msg(chat_id, "📋 Watchlist bos. Kullanim: /watchlist <adres>")
+            else:
+                msg = "👁 Watchlist:\n\n" + "\n".join([f"{a[:25]}..." for a in wl])
+                await send_msg(chat_id, msg)
+        elif len(parts) == 2:
+            add_watchlist(user_id, parts[1].strip())
+            await send_msg(chat_id, "✅ Watchliste eklendi!")
+    elif text.startswith("/unwatch"):
+        parts = text.split()
+        if len(parts) == 2:
+            remove_watchlist(user_id, parts[1].strip())
+            await send_msg(chat_id, "✅ Watchlistten silindi.")
     elif text.startswith("/check "):
         address = text[7:].strip()
         await send_typing(chat_id)
@@ -490,7 +550,7 @@ async def process_update(update):
         reports = get_scam_reports(address)
         votes = get_safe_votes(address)
         result = await format_wallet_analysis(address, wallet, txs, reports, votes)
-        kb = [[{"text": "🚨 Report this wallet", "callback_data": f"rep_inv_{address}"},
+        kb = [[{"text": "📋 Watchlist", "callback_data": "watchlist"}, {"text": "🚨 Report this wallet", "callback_data": f"rep_inv_{address}"},
                {"text": "✅ Looks Safe", "callback_data": f"safe_{address}"}]]
         await send_msg(chat_id, result, kb)
 
