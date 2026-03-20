@@ -155,8 +155,7 @@ def get_user_count():
 
 TEXTS = {
     'en': {
-        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/ai <question> — Ask AI
-/watchlist <address> — Watch wallet changes\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
+        'start': "🛡️ *TON Security Agent*\n\nAI-powered security for the TON ecosystem.\n\n*Commands:*\n/check `<address>` — Analyze wallet\n/scan `<message>` — Scan for scams\n/report `<address>` — Report scam wallet\n/ai <question> — Ask AI\n/watchlist <address> — Watch wallet changes\n/top10 — Most reported scam wallets\n/stats — Community statistics\n/help — How to use\n/lang — Change language\n\nOr just send a TON address directly!",
         'help': "📖 *How to use TON Security Agent*\n\n1️⃣ *Check a wallet:*\nSend any TON address or use /check\n\n2️⃣ *Scan a message:*\n`/scan send me 1 TON get 10 back`\n\n3️⃣ *Report a scammer:*\n`/report EQD...address`\nThen select the scam category\n\n4️⃣ *See top scams:*\n/top10\n\n🤖 Powered by Groq AI + TONCenter API\n📂 github.com/Atakanus/ton-security-agent",
         'analyzing': "🔍 *Analyzing wallet...*\n_AI agent is querying the blockchain_",
         'scanning': "🔍 *Scanning message...*",
