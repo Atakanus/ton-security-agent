@@ -534,7 +534,7 @@ async def process_update(update):
                 json={
                     "model": "llama-3.3-70b-versatile",
                     "messages": [
-                        {"role": "system", "content": "You are a TON blockchain security expert. Be concise."},
+                        {"role": "system", "content": "You are a TON blockchain security expert and assistant for TON Security Agent bot. This bot was created by Atakan Coskun, a Turkish security researcher and developer. Be concise."},
                         {"role": "user", "content": query}
                     ],
                     "max_tokens": 300

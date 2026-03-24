@@ -99,3 +99,29 @@ For Web3 to reach mass adoption, security must be invisible. By embedding AI-pow
 ---
 
 *Built with ❤️ for the TON ecosystem*
+
+---
+
+## 🗺️ Roadmap
+
+**Phase 1 ✅ (Complete)**
+- Wallet risk analysis
+- AI scam classification
+- Community scam database
+- Public REST API
+- Multi-language support (EN/RU/ZH)
+- Watchlist & AI assistant
+
+**Phase 2**
+- Browser extension
+- Telegram auto-scam detection
+- Developer SDK
+
+**Phase 3**
+- Exchange integrations (STON.fi, DeDust)
+- Real-time transaction simulation
+- TON security oracle
+
+---
+
+> Built by a solo developer. *The Chainalysis of TON.*
